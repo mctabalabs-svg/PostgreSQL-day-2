@@ -1,19 +1,11 @@
 const createError = require("http-errors");
-
 const leadsRepo = require("../repositories/leadsRepo");
 
-async function listLeads(query) {
-  const filters = {
-    limit: parseInt(query.limit || "10", 10),
-    offset: parseInt(query.offset || "0", 10),
-    q: query.q || "",
-    status: query.status || "",
-  };
-
-  return await leadsRepo.list(filters);
+async function list() {
+  return leadsRepo.list();
 }
 
-async function getLead(id) {
+async function getOne(id) {
   const lead = await leadsRepo.getById(id);
 
   if (!lead) {
@@ -23,34 +15,23 @@ async function getLead(id) {
   return lead;
 }
 
-async function updateLead(id, body) {
-  const allowedStatuses = [
-    "new",
-    "contacted",
-    "qualified",
-    "lost",
-  ];
+async function update(id, data) {
+  const existing = await leadsRepo.getById(id);
 
-  if (!allowedStatuses.includes(body.status)) {
-    throw createError(400, "Invalid status");
-  }
-
-  const updatedLead = await leadsRepo.update(id, body.status);
-
-  if (!updatedLead) {
+  if (!existing) {
     throw createError(404, "Lead not found");
   }
 
-  return updatedLead;
+  return leadsRepo.update(id, data);
 }
 
-async function getStats() {
-  return await leadsRepo.stats();
+async function stats() {
+  return leadsRepo.stats();
 }
 
 module.exports = {
-  listLeads,
-  getLead,
-  updateLead,
-  getStats,
+  list,
+  getOne,
+  update,
+  stats,
 };

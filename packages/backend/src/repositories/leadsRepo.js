@@ -1,31 +1,60 @@
-// src/repositories/leadsRepo.js
+// server/repositories/leadsRepo.js
+
 const pool = require("../../db/pool");
 
-async function list({ limit, offset, q, status }) {
-  const params = [];
-  const conditions = [];
+// GET all leads
+async function list() {
+  const result = await pool.query(
+    `SELECT id, name, email, status, created_at
+     FROM leads
+     ORDER BY created_at DESC`
+  );
 
-  if (q) {
-    params.push(`%${q}%`);
-    conditions.push(`(name ILIKE $${params.length} OR email ILIKE $${params.length})`);
-  }
-  if (status) {
-    params.push(status);
-    conditions.push(`status = $${params.length}`);
-  }
-
-  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-  params.push(limit, offset);
-
-  const sql = `
-    SELECT * FROM leads
-    ${where}
-    ORDER BY created_at DESC
-    LIMIT $${params.length - 1} OFFSET $${params.length}
-  `;
-
-  const { rows } = await pool.query(sql, params);
-  return rows;
+  return result.rows;
 }
 
-module.exports = { list };
+// GET one lead by ID
+async function getById(id) {
+  const result = await pool.query(
+    `SELECT id, name, email, status, created_at
+     FROM leads
+     WHERE id = $1`,
+    [id]
+  );
+
+  return result.rows[0];
+}
+
+// UPDATE lead status
+async function update(id, data) {
+  const result = await pool.query(
+    `UPDATE leads
+     SET name = $1,
+         email = $2,
+         status = $3
+     WHERE id = $4
+     RETURNING id, name, email, status, created_at`,
+    [data.name, data.email, data.status, id]
+  );
+
+  return result.rows[0];
+}
+
+// GET statistics
+async function stats() {
+  const result = await pool.query(
+    `SELECT status, COUNT(*)::int AS count
+     FROM leads
+     GROUP BY status
+     ORDER BY status`
+  );
+
+  return result.rows;
+}
+
+module.exports = {
+  list,
+  getById,
+  update,
+  stats,
+};
